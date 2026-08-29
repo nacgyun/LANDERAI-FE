@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
-import { isClerkConfigured } from '@/lib/auth'
+import { isClerkConfigured } from '@/lib/auth-config'
 
 type ClerkErrorLike = {
   errors?: Array<{
