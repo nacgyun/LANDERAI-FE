@@ -5,31 +5,11 @@ import {
   SignIn as ClerkSignIn,
 } from '@clerk/clerk-react';
 import {
-  createContext,
-  useContext,
   useMemo,
   type ReactNode,
 } from 'react';
-
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '';
-const JWT_TEMPLATE = import.meta.env.VITE_CLERK_JWT_TEMPLATE || '';
-const CLERK_CONFIGURED = !!PUBLISHABLE_KEY && PUBLISHABLE_KEY.startsWith('pk_');
-
-export function isClerkConfigured(): boolean {
-  return CLERK_CONFIGURED;
-}
-
-interface AuthContextValue {
-  isLoaded: boolean;
-  isSignedIn: boolean;
-  getToken: () => Promise<string | null>;
-}
-
-const MockAuthContext = createContext<AuthContextValue>({
-  isLoaded: true,
-  isSignedIn: false,
-  getToken: async () => null,
-});
+import { CLERK_JWT_TEMPLATE, CLERK_PUBLISHABLE_KEY, isClerkConfigured } from './auth-config';
+import { AuthContext, type AuthContextValue } from './auth-context';
 
 function MockAuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
@@ -43,9 +23,9 @@ function MockAuthProvider({ children }: { children: ReactNode }) {
     [],
   );
   return (
-    <MockAuthContext.Provider value={value}>
+    <AuthContext.Provider value={value}>
       {children}
-    </MockAuthContext.Provider>
+    </AuthContext.Provider>
   );
 }
 
@@ -56,12 +36,12 @@ function ClerkAuthBridge({ children }: { children: ReactNode }) {
       isLoaded: clerk.isLoaded,
       isSignedIn: !!clerk.isSignedIn,
       getToken: () =>
-        clerk.getToken(JWT_TEMPLATE ? { template: JWT_TEMPLATE } : undefined),
+        clerk.getToken(CLERK_JWT_TEMPLATE ? { template: CLERK_JWT_TEMPLATE } : undefined),
     }),
     [clerk],
   );
 
-  return <MockAuthContext.Provider value={value}>{children}</MockAuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,16 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   return (
     <ClerkProvider
-      publishableKey={PUBLISHABLE_KEY}
+      publishableKey={CLERK_PUBLISHABLE_KEY}
       afterSignOutUrl="/login"
     >
       <ClerkAuthBridge>{children}</ClerkAuthBridge>
     </ClerkProvider>
   );
-}
-
-export function useAuth(): AuthContextValue {
-  return useContext(MockAuthContext);
 }
 
 export function UserButton() {

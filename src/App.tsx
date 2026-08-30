@@ -9,7 +9,8 @@ import Login from '@/pages/Login';
 import Home from '@/pages/Home';
 import RequestHistory from '@/pages/RequestHistory';
 import MyPage from '@/pages/MyPage';
-import { AuthProvider, useAuth } from '@/lib/auth';
+import { AuthProvider } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-context';
 
 function RootRedirect() {
   const { isLoaded, isSignedIn } = useAuth();

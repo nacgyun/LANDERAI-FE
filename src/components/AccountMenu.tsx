@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useClerk } from '@clerk/clerk-react';
 import { KeyRound, LogOut, Settings, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isClerkConfigured } from '@/lib/auth';
+import { isClerkConfigured } from '@/lib/auth-config';
 
 type AccountMenuMode = 'header' | 'profile';
 

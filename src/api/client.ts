@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-context';
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://nlhgsrcti7.execute-api.ap-northeast-2.amazonaws.com';

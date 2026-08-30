@@ -1,0 +1,126 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: frontend-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+
+    env:
+      AWS_REGION: ap-northeast-2
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+      VITE_CLERK_JWT_TEMPLATE: ${{ vars.VITE_CLERK_JWT_TEMPLATE }}
+      S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_variables=(
+            VITE_API_BASE_URL
+            VITE_CLERK_PUBLISHABLE_KEY
+            S3_BUCKET_NAME
+            CLOUDFRONT_DISTRIBUTION_ID
+          )
+
+          for variable_name in "${required_variables[@]}"; do
+            if [ -z "${!variable_name:-}" ]; then
+              echo "Missing GitHub Environment variable: ${variable_name}"
+              exit 1
+            fi
+          done
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check frontend
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Show OIDC identity claims
+        shell: bash
+        run: |
+          set -euo pipefail
+          oidc_token="$({
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com"
+          } | python -c "import json,sys; print(json.load(sys.stdin)['value'])")"
+
+          OIDC_TOKEN="${oidc_token}" python - <<'PY'
+          import base64
+          import json
+          import os
+
+          payload = os.environ["OIDC_TOKEN"].split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+
+          safe_claims = {
+              key: claims.get(key)
+              for key in (
+                  "sub",
+                  "aud",
+                  "repository",
+                  "ref",
+                  "environment",
+                  "job_workflow_ref",
+              )
+          }
+          print(json.dumps(safe_claims, indent=2))
+          PY
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: landerai-${{ github.ref_name }}-frontend-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload versioned assets
+        run: |
+          aws s3 sync dist/assets "s3://${S3_BUCKET_NAME}/assets" \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Upload frontend entry files
+        run: |
+          aws s3 sync dist "s3://${S3_BUCKET_NAME}" \
+            --delete \
+            --exclude "assets/*" \
+            --cache-control "no-cache"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths "/*"
