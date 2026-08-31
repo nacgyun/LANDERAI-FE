@@ -7,12 +7,18 @@ import type {
   RequestState,
   RequestListResponse,
   VariantSelectionResponse,
+  UserInitializationResponse,
 } from './types';
 
 export function useApi() {
   const { authorizedFetch } = useApiClient();
 
   return {
+    initializeCurrentUser: () =>
+      authorizedFetch<UserInitializationResponse>('/api/v1/users/me/initialize', {
+        method: 'POST',
+      }),
+
     getCurrentUser: () =>
       authorizedFetch<CurrentUserResponse>('/api/v1/users', { method: 'GET' }),
 
