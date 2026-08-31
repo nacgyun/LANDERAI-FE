@@ -9,6 +9,7 @@ import Login from '@/pages/Login';
 import Home from '@/pages/Home';
 import RequestHistory from '@/pages/RequestHistory';
 import MyPage from '@/pages/MyPage';
+import SignupComplete from '@/pages/SignupComplete';
 import { AuthProvider } from '@/lib/auth';
 import { useAuth } from '@/lib/auth-context';
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup-complete" element={<SignupComplete />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/create" element={<CreateRequest />} />
                 <Route path="/history" element={<RequestHistory />} />
