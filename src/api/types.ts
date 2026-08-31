@@ -80,6 +80,12 @@ export interface CurrentUserResponse {
   profile_source: 'landerai' | 'clerk_fallback';
 }
 
+export interface UserInitializationResponse {
+  initialized: boolean;
+  user_id: string;
+  role: string;
+}
+
 export interface VariantPreview {
   preview_url: string;
   html_s3_bucket: string;

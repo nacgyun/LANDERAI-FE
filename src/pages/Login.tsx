@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   Loader2,
 } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { isClerkConfigured } from '@/lib/auth-config'
 
@@ -60,6 +60,7 @@ function ClerkLoginForm() {
   const clerk = useClerk()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -111,6 +112,11 @@ function ClerkLoginForm() {
       </Link>
 
       <form className="space-y-5" autoComplete="off" onSubmit={handleSubmit}>
+        {searchParams.get('signup') === 'complete' && (
+          <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-5 text-emerald-700">
+            회원가입이 완료되었습니다. 로그인해 주세요.
+          </div>
+        )}
         <label className="block">
           <span className="mb-2 block text-xs font-semibold text-slate-600">이메일</span>
           <input
@@ -176,7 +182,7 @@ function ClerkLoginForm() {
           </button>
           <button
             type="button"
-            onClick={() => clerk.openSignUp()}
+            onClick={() => clerk.openSignUp({ forceRedirectUrl: '/signup-complete' })}
             className="flex h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-900/10"
           >
             회원가입
