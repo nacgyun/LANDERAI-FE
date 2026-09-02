@@ -110,3 +110,11 @@ export interface VariantSelectionResponse {
   selected_design_plan_id: string | null;
   design_plan_vector_key: string | null;
 }
+
+export interface DownloadUrlResponse {
+  request_id: string;
+  variant: 'A' | 'B';
+  filename: string;
+  download_url: string;
+  expires_in: number;
+}

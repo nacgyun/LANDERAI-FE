@@ -7,9 +7,11 @@ import {
   RefreshCw,
   ArrowLeft,
   ExternalLink,
+  Download,
 } from 'lucide-react';
 import {
   usePreviewUrls,
+  useDownloadSelectedVariant,
   useRequestStatus,
   useSaveVariantSelection,
   useVariantSelection,
@@ -131,6 +133,7 @@ function PreviewPanel({
   const previewQuery = usePreviewUrls(requestId, status === 'COMPLETED');
   const selectionQuery = useVariantSelection(requestId, status === 'COMPLETED');
   const saveMutation = useSaveVariantSelection(requestId);
+  const downloadMutation = useDownloadSelectedVariant(requestId);
   const [activeTab, setActiveTab] = useState<'A' | 'B'>('A');
 
   const selectedVariant =
@@ -139,6 +142,20 @@ function PreviewPanel({
 
   const refreshPreview = () => {
     previewQuery.refetch();
+  };
+
+  const downloadSelectedVariant = async () => {
+    try {
+      const result = await downloadMutation.mutateAsync();
+      const link = document.createElement('a');
+      link.href = result.download_url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      // Mutation state renders the user-facing error below.
+    }
   };
 
   if (status !== 'COMPLETED') return null;
@@ -287,7 +304,7 @@ function PreviewPanel({
           )}
 
           {selectionQuery.data?.selected_design_plan_id && (
-            <div className="card p-4 text-sm">
+            <div className="card space-y-3 p-4 text-sm">
               <div className="mb-1 font-medium text-slate-900">선택 결과</div>
               <div className="text-slate-600">
                 선택한 variant:{' '}
@@ -301,6 +318,25 @@ function PreviewPanel({
                   {selectionQuery.data.selected_design_plan_id}
                 </code>
               </div>
+              <button
+                type="button"
+                onClick={downloadSelectedVariant}
+                disabled={downloadMutation.isPending}
+                className="btn-primary w-full sm:w-auto"
+              >
+                {downloadMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadMutation.isPending ? '다운로드 준비 중...' : '선택한 코드 다운로드'}
+              </button>
+              {downloadMutation.isError && (
+                <div className="text-rose-600">
+                  {(downloadMutation.error as Error)?.message ||
+                    '다운로드 URL을 만들지 못했어요. 다시 시도해 주세요.'}
+                </div>
+              )}
             </div>
           )}
         </>
