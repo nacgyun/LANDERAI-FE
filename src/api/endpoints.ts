@@ -3,6 +3,7 @@ import type {
   CreateRequestInput,
   CreateRequestResponse,
   CurrentUserResponse,
+  DownloadUrlResponse,
   PreviewUrlsResponse,
   RequestState,
   RequestListResponse,
@@ -53,5 +54,10 @@ export function useApi() {
           body: JSON.stringify({ selected_variant: selectedVariant }),
         },
       ),
+
+    getDownloadUrl: (requestId: string) =>
+      authorizedFetch<DownloadUrlResponse>(`/api/v1/requests/${requestId}/download`, {
+        method: 'GET',
+      }),
   };
 }

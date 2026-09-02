@@ -70,3 +70,10 @@ export function useSaveVariantSelection(requestId: string | undefined) {
     },
   });
 }
+
+export function useDownloadSelectedVariant(requestId: string | undefined) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: () => api.getDownloadUrl(requestId!),
+  });
+}
