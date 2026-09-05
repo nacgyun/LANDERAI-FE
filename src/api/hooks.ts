@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './endpoints';
-import type { CreateRequestInput } from './types';
+import type { CreateRequestInput, CreateRevisionInput } from './types';
 
 export function useCreateRequest() {
   const api = useApi();
@@ -75,5 +75,58 @@ export function useDownloadSelectedVariant(requestId: string | undefined) {
   const api = useApi();
   return useMutation({
     mutationFn: () => api.getDownloadUrl(requestId!),
+  });
+}
+
+export function useRevisions(requestId: string | undefined, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['revisions', requestId],
+    queryFn: () => api.listRevisions(requestId!),
+    enabled: !!requestId && enabled,
+  });
+}
+
+export function useCreateRevision(requestId: string | undefined) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateRevisionInput) => api.createRevision(requestId!, input),
+    onSuccess: (revision) => {
+      queryClient.setQueryData(['revision', requestId, revision.revision_id], revision);
+      queryClient.invalidateQueries({ queryKey: ['revisions', requestId] });
+    },
+  });
+}
+
+export function useRevisionStatus(
+  requestId: string | undefined,
+  revisionId: string | undefined,
+  enabled = true,
+) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['revision', requestId, revisionId],
+    queryFn: () => api.getRevision(requestId!, revisionId!),
+    enabled: !!requestId && !!revisionId && enabled,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return !status || status === 'QUEUED' || status === 'PROCESSING' ? 2500 : false;
+    },
+    refetchIntervalInBackground: true,
+  });
+}
+
+export function useRevisionPreviewUrl(
+  requestId: string | undefined,
+  revisionId: string | undefined,
+  enabled = true,
+) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['revision-preview', requestId, revisionId],
+    queryFn: () => api.getRevisionPreviewUrl(requestId!, revisionId!),
+    enabled: !!requestId && !!revisionId && enabled,
+    retry: 1,
   });
 }
