@@ -41,6 +41,8 @@ export interface RequestState {
   landing_result_id: string | null;
   selection_status: 'NOT_SELECTED' | 'SELECTED';
   chosen_variant: 'A' | 'B' | null;
+  latest_revision_id: string | null;
+  published_revision_id: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -109,6 +111,8 @@ export interface VariantSelectionResponse {
   chosen_variant: 'A' | 'B' | null;
   selected_design_plan_id: string | null;
   design_plan_vector_key: string | null;
+  latest_revision_id: string | null;
+  published_revision_id: string | null;
 }
 
 export interface DownloadUrlResponse {
@@ -116,5 +120,41 @@ export interface DownloadUrlResponse {
   variant: 'A' | 'B';
   filename: string;
   download_url: string;
+  expires_in: number;
+}
+
+export type RevisionStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface LandingPageRevision {
+  revision_id: string;
+  request_id: string;
+  source_revision_id: string | null;
+  revision_prompt: string | null;
+  source_type: 'VARIANT' | 'REVISION';
+  source_variant: 'A' | 'B' | null;
+  html_s3_bucket: string | null;
+  html_s3_key: string | null;
+  created_at: string;
+  updated_at: string;
+  processing_started_at: string | null;
+  status: RevisionStatus;
+  error_type: string | null;
+  error_message: string | null;
+}
+
+export interface RevisionListResponse {
+  items: LandingPageRevision[];
+  total: number;
+}
+
+export interface CreateRevisionInput {
+  source_revision_id: string;
+  revision_prompt: string;
+}
+
+export interface RevisionPreviewUrlResponse {
+  request_id: string;
+  revision_id: string;
+  preview_url: string;
   expires_in: number;
 }

@@ -9,6 +9,10 @@ import type {
   RequestListResponse,
   VariantSelectionResponse,
   UserInitializationResponse,
+  CreateRevisionInput,
+  LandingPageRevision,
+  RevisionListResponse,
+  RevisionPreviewUrlResponse,
 } from './types';
 
 export function useApi() {
@@ -59,5 +63,28 @@ export function useApi() {
       authorizedFetch<DownloadUrlResponse>(`/api/v1/requests/${requestId}/download`, {
         method: 'GET',
       }),
+
+    createRevision: (requestId: string, input: CreateRevisionInput) =>
+      authorizedFetch<LandingPageRevision>(`/api/v1/requests/${requestId}/revisions`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+
+    listRevisions: (requestId: string) =>
+      authorizedFetch<RevisionListResponse>(`/api/v1/requests/${requestId}/revisions`, {
+        method: 'GET',
+      }),
+
+    getRevision: (requestId: string, revisionId: string) =>
+      authorizedFetch<LandingPageRevision>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}`,
+        { method: 'GET' },
+      ),
+
+    getRevisionPreviewUrl: (requestId: string, revisionId: string) =>
+      authorizedFetch<RevisionPreviewUrlResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/preview-url`,
+        { method: 'GET' },
+      ),
   };
 }
