@@ -3,7 +3,6 @@ import type {
   CreateRequestInput,
   CreateRequestResponse,
   CurrentUserResponse,
-  DownloadUrlResponse,
   PreviewUrlsResponse,
   RequestState,
   RequestListResponse,
@@ -12,7 +11,10 @@ import type {
   CreateRevisionInput,
   LandingPageRevision,
   RevisionListResponse,
+  RevisionDownloadUrlResponse,
   RevisionPreviewUrlResponse,
+  LandingPageHostingResponse,
+  PublishRevisionInput,
 } from './types';
 
 export function useApi() {
@@ -59,11 +61,6 @@ export function useApi() {
         },
       ),
 
-    getDownloadUrl: (requestId: string) =>
-      authorizedFetch<DownloadUrlResponse>(`/api/v1/requests/${requestId}/download`, {
-        method: 'GET',
-      }),
-
     createRevision: (requestId: string, input: CreateRevisionInput) =>
       authorizedFetch<LandingPageRevision>(`/api/v1/requests/${requestId}/revisions`, {
         method: 'POST',
@@ -85,6 +82,31 @@ export function useApi() {
       authorizedFetch<RevisionPreviewUrlResponse>(
         `/api/v1/requests/${requestId}/revisions/${revisionId}/preview-url`,
         { method: 'GET' },
+      ),
+
+    getRevisionDownloadUrl: (requestId: string, revisionId: string) =>
+      authorizedFetch<RevisionDownloadUrlResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/download`,
+        { method: 'GET' },
+      ),
+
+    getHosting: (requestId: string) =>
+      authorizedFetch<LandingPageHostingResponse>(
+        `/api/v1/requests/${requestId}/hosting`,
+        { method: 'GET' },
+      ),
+
+    publishRevision: (
+      requestId: string,
+      revisionId: string,
+      input: PublishRevisionInput,
+    ) =>
+      authorizedFetch<LandingPageHostingResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/publish`,
+        {
+          method: 'POST',
+          body: JSON.stringify(input),
+        },
       ),
   };
 }

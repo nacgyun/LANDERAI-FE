@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './endpoints';
-import type { CreateRequestInput, CreateRevisionInput } from './types';
+import type { CreateRequestInput, CreateRevisionInput, PublishRevisionInput } from './types';
 
 export function useCreateRequest() {
   const api = useApi();
@@ -71,10 +71,10 @@ export function useSaveVariantSelection(requestId: string | undefined) {
   });
 }
 
-export function useDownloadSelectedVariant(requestId: string | undefined) {
+export function useDownloadRevision(requestId: string | undefined) {
   const api = useApi();
   return useMutation({
-    mutationFn: () => api.getDownloadUrl(requestId!),
+    mutationFn: (revisionId: string) => api.getRevisionDownloadUrl(requestId!, revisionId),
   });
 }
 
@@ -128,5 +128,35 @@ export function useRevisionPreviewUrl(
     queryFn: () => api.getRevisionPreviewUrl(requestId!, revisionId!),
     enabled: !!requestId && !!revisionId && enabled,
     retry: 1,
+  });
+}
+
+export function useHosting(requestId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['hosting', requestId],
+    queryFn: () => api.getHosting(requestId!),
+    enabled: !!requestId,
+    refetchInterval: (query) =>
+      query.state.data?.hosting_status === 'PUBLISHING' ? 2500 : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
+export function usePublishRevision(requestId: string | undefined) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      revisionId,
+      input,
+    }: {
+      revisionId: string;
+      input: PublishRevisionInput;
+    }) => api.publishRevision(requestId!, revisionId, input),
+    onSuccess: (hosting) => {
+      queryClient.setQueryData(['hosting', requestId], hosting);
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+    },
   });
 }
