@@ -10,10 +10,12 @@ import {
   Download,
   Wand2,
   History,
+  Globe2,
+  X,
 } from 'lucide-react';
 import {
   usePreviewUrls,
-  useDownloadSelectedVariant,
+  useDownloadRevision,
   useRequestStatus,
   useSaveVariantSelection,
   useVariantSelection,
@@ -21,6 +23,8 @@ import {
   useRevisions,
   useRevisionPreviewUrl,
   useRevisionStatus,
+  useHosting,
+  usePublishRevision,
 } from '@/api/hooks';
 import type { CurrentStep, LandingPageRevision, RevisionStatus } from '@/api/types';
 
@@ -330,10 +334,14 @@ function RevisionWorkspace({
 }) {
   const revisionsQuery = useRevisions(requestId);
   const createMutation = useCreateRevision(requestId);
-  const downloadMutation = useDownloadSelectedVariant(requestId);
+  const downloadMutation = useDownloadRevision(requestId);
+  const hostingQuery = useHosting(requestId);
+  const publishMutation = usePublishRevision(requestId);
   const [selectedRevisionId, setSelectedRevisionId] = useState(latestRevisionId);
   const [processingRevisionId, setProcessingRevisionId] = useState<string>();
   const [prompt, setPrompt] = useState('');
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [projectName, setProjectName] = useState('');
   const processingQuery = useRevisionStatus(
     requestId,
     processingRevisionId,
@@ -352,10 +360,39 @@ function RevisionWorkspace({
     selectedRevisionId,
     selectedRevision?.status === 'COMPLETED',
   );
+  const hosting = hostingQuery.data;
+  const isSelectedRevisionPublished =
+    hosting?.hosting_status === 'PUBLISHED' &&
+    hosting.published_revision_id === selectedRevisionId;
+
+  const requestPublish = () => {
+    if (!selectedRevision || selectedRevision.status !== 'COMPLETED') return;
+    if (hosting?.site_slug) {
+      publishMutation.mutate({ revisionId: selectedRevisionId, input: {} });
+      return;
+    }
+    setProjectName('');
+    setIsPublishModalOpen(true);
+  };
+
+  const submitPublish = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const normalizedProjectName = projectName.trim();
+    if (!normalizedProjectName) return;
+    try {
+      await publishMutation.mutateAsync({
+        revisionId: selectedRevisionId,
+        input: { project_name: normalizedProjectName },
+      });
+      setIsPublishModalOpen(false);
+    } catch {
+      // Mutation state is rendered in the modal.
+    }
+  };
 
   const downloadLatestRevision = async () => {
     try {
-      const result = await downloadMutation.mutateAsync();
+      const result = await downloadMutation.mutateAsync(selectedRevisionId);
       const link = document.createElement('a');
       link.href = result.download_url;
       link.download = result.filename;
@@ -416,20 +453,75 @@ function RevisionWorkspace({
             이력에서 기준 버전을 고른 뒤 원하는 변경사항을 입력하세요.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={downloadLatestRevision}
-          disabled={downloadMutation.isPending}
-          className="btn-primary"
-        >
-          {downloadMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          {downloadMutation.isPending ? '다운로드 준비 중...' : '코드 다운로드'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={downloadLatestRevision}
+            disabled={downloadMutation.isPending}
+            className="btn-secondary"
+          >
+            {downloadMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {downloadMutation.isPending ? '다운로드 준비 중...' : '코드 다운로드'}
+          </button>
+          <button
+            type="button"
+            onClick={requestPublish}
+            disabled={
+              !selectedRevision ||
+              selectedRevision.status !== 'COMPLETED' ||
+              publishMutation.isPending ||
+              hosting?.hosting_status === 'PUBLISHING' ||
+              isSelectedRevisionPublished
+            }
+            className="btn-primary"
+          >
+            {publishMutation.isPending || hosting?.hosting_status === 'PUBLISHING' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Globe2 className="h-4 w-4" />
+            )}
+            {isSelectedRevisionPublished
+              ? '현재 호스팅 중'
+              : publishMutation.isPending || hosting?.hosting_status === 'PUBLISHING'
+                ? '호스팅 중...'
+                : hosting?.site_slug
+                  ? '이 버전 게시하기'
+                  : '호스팅하기'}
+          </button>
+        </div>
       </div>
+
+      {hosting?.hosting_status === 'PUBLISHED' && hosting.published_url && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
+          <div>
+            <span className="font-medium text-emerald-800">사이트가 게시되어 있어요.</span>
+            <span className="ml-2 text-emerald-700">{hosting.published_url}</span>
+          </div>
+          <a
+            href={hosting.published_url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 font-medium text-emerald-800 hover:text-emerald-950"
+          >
+            사이트 열기 <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      )}
+
+      {(hosting?.hosting_status === 'FAILED' || publishMutation.isError) && (
+        <div className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {(publishMutation.error as Error)?.message ||
+              hosting?.error_message ||
+              '사이트를 게시하지 못했어요. 다시 시도해 주세요.'}
+          </span>
+        </div>
+      )}
 
       {downloadMutation.isError && (
         <div className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
@@ -549,11 +641,19 @@ function RevisionWorkspace({
                     <span className="text-xs font-semibold text-slate-800">
                       {revision.source_type === 'VARIANT' ? '최초 선택본' : `수정 ${revisions.length - index - 1}`}
                     </span>
-                    <span className={`text-[11px] ${
-                      revision.status === 'FAILED' ? 'text-rose-600' : 'text-slate-500'
-                    }`}>
-                      {REVISION_STATUS_LABEL[revision.status]}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {hosting?.published_revision_id === revision.revision_id &&
+                        hosting.hosting_status === 'PUBLISHED' && (
+                          <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                            게시 중
+                          </span>
+                        )}
+                      <span className={`text-[11px] ${
+                        revision.status === 'FAILED' ? 'text-rose-600' : 'text-slate-500'
+                      }`}>
+                        {REVISION_STATUS_LABEL[revision.status]}
+                      </span>
+                    </div>
                   </div>
                   {revision.revision_prompt && (
                     <p className="mt-1 line-clamp-2 text-xs text-slate-600">{revision.revision_prompt}</p>
@@ -565,6 +665,89 @@ function RevisionWorkspace({
           )}
         </div>
       </div>
+
+      {isPublishModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !publishMutation.isPending) {
+              setIsPublishModalOpen(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-modal-title"
+            className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="publish-modal-title" className="text-base font-semibold text-slate-900">
+                  프로젝트 이름을 정해주세요
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  입력한 이름을 바탕으로 사이트 주소를 만들어요.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="닫기"
+                disabled={publishMutation.isPending}
+                onClick={() => setIsPublishModalOpen(false)}
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={submitPublish} className="mt-5 space-y-4">
+              <div>
+                <label htmlFor="project-name" className="text-sm font-medium text-slate-800">
+                  프로젝트 이름
+                </label>
+                <input
+                  id="project-name"
+                  autoFocus
+                  required
+                  maxLength={100}
+                  value={projectName}
+                  disabled={publishMutation.isPending}
+                  onChange={(event) => setProjectName(event.target.value)}
+                  placeholder="예: My Portfolio"
+                  className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                />
+                <p className="mt-1.5 text-xs text-slate-500">
+                  영문과 숫자를 포함해 주세요. 주소가 중복되면 임의 문자가 붙어요.
+                </p>
+              </div>
+              {publishMutation.isError && (
+                <div className="text-sm text-rose-600">
+                  {(publishMutation.error as Error).message}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={publishMutation.isPending}
+                  onClick={() => setIsPublishModalOpen(false)}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={!projectName.trim() || publishMutation.isPending}
+                >
+                  {publishMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {publishMutation.isPending ? '호스팅 중...' : '호스팅하기'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

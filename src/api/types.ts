@@ -115,14 +115,6 @@ export interface VariantSelectionResponse {
   published_revision_id: string | null;
 }
 
-export interface DownloadUrlResponse {
-  request_id: string;
-  variant: 'A' | 'B';
-  filename: string;
-  download_url: string;
-  expires_in: number;
-}
-
 export type RevisionStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface LandingPageRevision {
@@ -157,4 +149,31 @@ export interface RevisionPreviewUrlResponse {
   revision_id: string;
   preview_url: string;
   expires_in: number;
+}
+
+export interface RevisionDownloadUrlResponse {
+  request_id: string;
+  revision_id: string;
+  filename: string;
+  download_url: string;
+  expires_in: number;
+}
+
+export type HostingStatus = 'UNPUBLISHED' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED';
+
+export interface PublishRevisionInput {
+  project_name?: string;
+}
+
+export interface LandingPageHostingResponse {
+  request_id: string;
+  site_id: string | null;
+  project_name: string | null;
+  site_slug: string | null;
+  hosting_status: HostingStatus;
+  published_revision_id: string | null;
+  published_url: string | null;
+  published_at: string | null;
+  error_type: string | null;
+  error_message: string | null;
 }
