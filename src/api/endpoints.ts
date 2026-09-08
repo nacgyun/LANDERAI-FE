@@ -8,6 +8,13 @@ import type {
   RequestListResponse,
   VariantSelectionResponse,
   UserInitializationResponse,
+  CreateRevisionInput,
+  LandingPageRevision,
+  RevisionListResponse,
+  RevisionDownloadUrlResponse,
+  RevisionPreviewUrlResponse,
+  LandingPageHostingResponse,
+  PublishRevisionInput,
 } from './types';
 
 export function useApi() {
@@ -51,6 +58,54 @@ export function useApi() {
         {
           method: 'POST',
           body: JSON.stringify({ selected_variant: selectedVariant }),
+        },
+      ),
+
+    createRevision: (requestId: string, input: CreateRevisionInput) =>
+      authorizedFetch<LandingPageRevision>(`/api/v1/requests/${requestId}/revisions`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+
+    listRevisions: (requestId: string) =>
+      authorizedFetch<RevisionListResponse>(`/api/v1/requests/${requestId}/revisions`, {
+        method: 'GET',
+      }),
+
+    getRevision: (requestId: string, revisionId: string) =>
+      authorizedFetch<LandingPageRevision>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}`,
+        { method: 'GET' },
+      ),
+
+    getRevisionPreviewUrl: (requestId: string, revisionId: string) =>
+      authorizedFetch<RevisionPreviewUrlResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/preview-url`,
+        { method: 'GET' },
+      ),
+
+    getRevisionDownloadUrl: (requestId: string, revisionId: string) =>
+      authorizedFetch<RevisionDownloadUrlResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/download`,
+        { method: 'GET' },
+      ),
+
+    getHosting: (requestId: string) =>
+      authorizedFetch<LandingPageHostingResponse>(
+        `/api/v1/requests/${requestId}/hosting`,
+        { method: 'GET' },
+      ),
+
+    publishRevision: (
+      requestId: string,
+      revisionId: string,
+      input: PublishRevisionInput,
+    ) =>
+      authorizedFetch<LandingPageHostingResponse>(
+        `/api/v1/requests/${requestId}/revisions/${revisionId}/publish`,
+        {
+          method: 'POST',
+          body: JSON.stringify(input),
         },
       ),
   };

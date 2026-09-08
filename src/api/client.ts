@@ -62,8 +62,13 @@ export function useApiClient() {
       let serverMessage = '';
       try {
         const data = await response.json();
+        const detail = data?.detail;
         serverMessage =
-          (data && (data.message || data.error_message || data.error)) || '';
+          (typeof detail === 'string' ? detail : detail?.message) ||
+          data?.message ||
+          data?.error_message ||
+          data?.error ||
+          '';
       } catch {
         // ignore parse errors
       }
