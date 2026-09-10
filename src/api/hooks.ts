@@ -138,7 +138,7 @@ export function useHosting(requestId: string | undefined) {
     queryFn: () => api.getHosting(requestId!),
     enabled: !!requestId,
     refetchInterval: (query) =>
-      query.state.data?.hosting_status === 'PUBLISHING' ? 2500 : false,
+      ['PUBLISHING', 'UNPUBLISHING'].includes(query.state.data?.hosting_status ?? '') ? 2500 : false,
     refetchIntervalInBackground: true,
   });
 }
@@ -156,6 +156,24 @@ export function usePublishRevision(requestId: string | undefined) {
     }) => api.publishRevision(requestId!, revisionId, input),
     onSuccess: (hosting) => {
       queryClient.setQueryData(['hosting', requestId], hosting);
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['hosting', requestId] });
+    },
+  });
+}
+
+export function useUnpublish(requestId: string | undefined) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.unpublish(requestId!),
+    onSuccess: (hosting) => {
+      queryClient.setQueryData(['hosting', requestId], hosting);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['hosting', requestId] });
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
     },
   });

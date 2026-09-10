@@ -159,7 +159,7 @@ export interface RevisionDownloadUrlResponse {
   expires_in: number;
 }
 
-export type HostingStatus = 'UNPUBLISHED' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED';
+export type HostingStatus = 'UNPUBLISHED' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED' | 'UNPUBLISHING' | 'UNPUBLISH_FAILED';
 
 export interface PublishRevisionInput {
   project_name?: string;

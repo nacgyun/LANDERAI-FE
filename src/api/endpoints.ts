@@ -96,6 +96,12 @@ export function useApi() {
         { method: 'GET' },
       ),
 
+    unpublish: (requestId: string) =>
+      authorizedFetch<LandingPageHostingResponse>(
+        `/api/v1/requests/${requestId}/hosting`,
+        { method: 'DELETE' },
+      ),
+
     publishRevision: (
       requestId: string,
       revisionId: string,
