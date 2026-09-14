@@ -501,6 +501,15 @@ function RevisionWorkspace({
         </div>
       </div>
 
+      {hostingQuery.isError && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
+          <span>현재 호스팅 상태를 확인할 수 없습니다. 표시된 정보가 최신 상태가 아닐 수 있습니다.</span>
+          <button type="button" className="btn-secondary" disabled={hostingQuery.isFetching} onClick={() => void hostingQuery.refetch()}>
+            {hostingQuery.isFetching ? '확인 중...' : '상태 다시 확인'}
+          </button>
+        </div>
+      )}
+
       {hosting?.hosting_status === 'PUBLISHED' && hosting.published_url && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
           <div>

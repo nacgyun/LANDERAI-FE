@@ -63,7 +63,16 @@ export function useApiClient() {
       try {
         const data = await response.json();
         const detail = data?.detail;
+        const validationMessage = Array.isArray(detail)
+          ? detail.map((issue: { type?: string; msg?: string }) => {
+              if (issue.type === 'extra_forbidden') return '허용되지 않은 입력 항목이 있습니다.';
+              if (issue.type === 'json_invalid') return '요청 본문의 JSON 형식이 올바르지 않습니다.';
+              if (issue.type === 'missing') return '필수 입력값이 누락되었습니다.';
+              return typeof issue.msg === 'string' ? issue.msg : '';
+            }).filter(Boolean).join('\n')
+          : '';
         serverMessage =
+          validationMessage ||
           (typeof detail === 'string' ? detail : detail?.message) ||
           data?.message ||
           data?.error_message ||
