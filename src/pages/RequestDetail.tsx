@@ -25,6 +25,7 @@ import {
   useRevisionStatus,
   useHosting,
   usePublishRevision,
+  useUnpublish,
 } from '@/api/hooks';
 import type { CurrentStep, LandingPageRevision, RevisionStatus } from '@/api/types';
 
@@ -337,6 +338,7 @@ function RevisionWorkspace({
   const downloadMutation = useDownloadRevision(requestId);
   const hostingQuery = useHosting(requestId);
   const publishMutation = usePublishRevision(requestId);
+  const unpublishMutation = useUnpublish(requestId);
   const [selectedRevisionId, setSelectedRevisionId] = useState(latestRevisionId);
   const [processingRevisionId, setProcessingRevisionId] = useState<string>();
   const [prompt, setPrompt] = useState('');
@@ -366,6 +368,7 @@ function RevisionWorkspace({
     hosting.published_revision_id === selectedRevisionId;
 
   const requestPublish = () => {
+    unpublishMutation.reset();
     if (!selectedRevision || selectedRevision.status !== 'COMPLETED') return;
     if (hosting?.site_slug) {
       publishMutation.mutate({ revisionId: selectedRevisionId, input: {} });
@@ -474,6 +477,9 @@ function RevisionWorkspace({
               !selectedRevision ||
               selectedRevision.status !== 'COMPLETED' ||
               publishMutation.isPending ||
+              unpublishMutation.isPending ||
+              hosting?.hosting_status === 'UNPUBLISHING' ||
+              hosting?.hosting_status === 'UNPUBLISH_FAILED' ||
               hosting?.hosting_status === 'PUBLISHING' ||
               isSelectedRevisionPublished
             }
@@ -495,6 +501,15 @@ function RevisionWorkspace({
         </div>
       </div>
 
+      {hostingQuery.isError && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
+          <span>현재 호스팅 상태를 확인할 수 없습니다. 표시된 정보가 최신 상태가 아닐 수 있습니다.</span>
+          <button type="button" className="btn-secondary" disabled={hostingQuery.isFetching} onClick={() => void hostingQuery.refetch()}>
+            {hostingQuery.isFetching ? '확인 중...' : '상태 다시 확인'}
+          </button>
+        </div>
+      )}
+
       {hosting?.hosting_status === 'PUBLISHED' && hosting.published_url && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
           <div>
@@ -509,6 +524,40 @@ function RevisionWorkspace({
           >
             사이트 열기 <ExternalLink className="h-4 w-4" />
           </a>
+        </div>
+      )}
+
+      {(hosting?.hosting_status === 'PUBLISHED' ||
+        hosting?.hosting_status === 'UNPUBLISHING' ||
+        hosting?.hosting_status === 'UNPUBLISH_FAILED' ||
+        unpublishMutation.isPending) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4 text-sm">
+          <p className="text-slate-600">
+            게시를 중단하면 기존 주소에 페이지 없음 안내가 표시됩니다. 원본은 보관되며 다시 게시할 수 있습니다.
+          </p>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={unpublishMutation.isPending || publishMutation.isPending || hosting?.hosting_status === 'UNPUBLISHING'}
+            onClick={() => {
+              publishMutation.reset();
+              unpublishMutation.mutate();
+            }}
+          >
+            {unpublishMutation.isPending || hosting?.hosting_status === 'UNPUBLISHING'
+              ? '게시 중단 중...'
+              : hosting?.hosting_status === 'UNPUBLISH_FAILED' ? '게시 중단 재시도' : '게시 중단'}
+          </button>
+        </div>
+      )}
+
+      {hosting?.hosting_status === 'UNPUBLISHED' && hosting.site_slug && (
+        <p className="text-sm text-slate-600">게시가 중단되었습니다. 기존 주소로 다시 게시할 수 있습니다.</p>
+      )}
+
+      {(hosting?.hosting_status === 'UNPUBLISH_FAILED' || unpublishMutation.isError) && (
+        <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-700">
+          {unpublishMutation.error?.message || hosting?.error_message || '게시 중단을 완료하지 못했습니다. 다시 시도해 주세요.'}
         </div>
       )}
 
