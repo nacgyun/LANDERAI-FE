@@ -45,6 +45,17 @@ const STEP_LABEL: Record<CurrentStep, string> = {
   DONE: '완료',
 };
 
+function getSafeHttpsUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function StatusCard({
   status,
   currentStep,
@@ -250,21 +261,29 @@ function PreviewPanel({
                       </span>
                     )}
                   </div>
-                  <a
-                    href={previewQuery.data.variants[variant].preview_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-slate-400 hover:text-slate-700"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
+                  {getSafeHttpsUrl(previewQuery.data.variants[variant].preview_url) && (
+                    <a
+                      href={getSafeHttpsUrl(previewQuery.data.variants[variant].preview_url)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-slate-400 hover:text-slate-700"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
                 </div>
                 <div className="bg-slate-50 p-2">
-                  <iframe
-                    title={`Variant ${variant} preview`}
-                    src={previewQuery.data.variants[variant].preview_url}
-                    className="h-[480px] w-full rounded-md border border-slate-200 bg-white sm:h-[560px]"
-                  />
+                  {getSafeHttpsUrl(previewQuery.data.variants[variant].preview_url) ? (
+                    <iframe
+                      title={`Variant ${variant} preview`}
+                      src={getSafeHttpsUrl(previewQuery.data.variants[variant].preview_url)!}
+                      className="h-[480px] w-full rounded-md border border-slate-200 bg-white sm:h-[560px]"
+                    />
+                  ) : (
+                    <div className="flex h-[480px] items-center justify-center text-sm text-slate-500 sm:h-[560px]">
+                      안전하지 않은 미리보기 URL입니다.
+                    </div>
+                  )}
                 </div>
                 <div className="border-t border-slate-200 p-3">
                   <button
@@ -510,14 +529,14 @@ function RevisionWorkspace({
         </div>
       )}
 
-      {hosting?.hosting_status === 'PUBLISHED' && hosting.published_url && (
+      {hosting?.hosting_status === 'PUBLISHED' && getSafeHttpsUrl(hosting.published_url) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
           <div>
             <span className="font-medium text-emerald-800">사이트가 게시되어 있어요.</span>
             <span className="ml-2 text-emerald-700">{hosting.published_url}</span>
           </div>
           <a
-            href={hosting.published_url}
+            href={getSafeHttpsUrl(hosting.published_url)!}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 font-medium text-emerald-800 hover:text-emerald-950"
@@ -587,9 +606,9 @@ function RevisionWorkspace({
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <span className="text-sm font-medium text-slate-900">선택한 버전</span>
-              {previewQuery.data && (
+              {previewQuery.data && getSafeHttpsUrl(previewQuery.data.preview_url) && (
                 <a
-                  href={previewQuery.data.preview_url}
+                  href={getSafeHttpsUrl(previewQuery.data.preview_url)!}
                   target="_blank"
                   rel="noreferrer"
                   className="text-slate-400 hover:text-slate-700"
@@ -603,10 +622,10 @@ function RevisionWorkspace({
               <div className="flex h-[420px] items-center justify-center text-sm text-slate-500">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 미리보기 준비 중...
               </div>
-            ) : previewQuery.data ? (
+            ) : previewQuery.data && getSafeHttpsUrl(previewQuery.data.preview_url) ? (
               <iframe
                 title="버전 미리보기"
-                src={previewQuery.data.preview_url}
+                src={getSafeHttpsUrl(previewQuery.data.preview_url)!}
                 className="h-[520px] w-full bg-white"
               />
             ) : (
